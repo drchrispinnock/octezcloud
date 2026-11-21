@@ -1,0 +1,76 @@
+<h1>Configure a deployment</h1>
+<p class="lede">
+  Pick your options. You get a link that opens your own cloud console with the template prefilled.
+  This site never sees your credentials or keys.
+</p>
+
+<div class="cfg">
+  <form id="configurator" class="card" novalidate>
+    <fieldset>
+      <legend>Cloud</legend>
+      <label class="radio"><input type="radio" name="cloud" value="aws" checked> AWS (Nitro Enclaves)</label>
+      <label class="radio is-disabled"><input type="radio" name="cloud" value="azure" disabled> Azure (Confidential Containers), planned</label>
+      <label class="radio is-disabled"><input type="radio" name="cloud" value="gcp" disabled> GCP (Confidential Space), planned</label>
+    </fieldset>
+
+    <label for="release">Signer release</label>
+    <select id="release"></select>
+
+    <label for="network">Network</label>
+    <select id="network"></select>
+
+    <fieldset>
+      <legend>Roles</legend>
+      <label class="check"><input type="checkbox" checked disabled> Octez node (always)</label>
+      <label class="check"><input type="checkbox" id="role-dal" checked> DAL node</label>
+      <label class="check"><input type="checkbox" id="role-baker" checked> Baker with TEE signer</label>
+    </fieldset>
+
+    <label for="region">Region</label>
+    <select id="region"></select>
+
+    <label for="instance-type">Instance type</label>
+    <select id="instance-type"></select>
+
+    <label for="disk-size">Data volume (GiB)</label>
+    <input id="disk-size" type="number" min="100" max="4000" step="50" value="300">
+
+    <label for="octez-version">Octez version</label>
+    <select id="octez-version"></select>
+
+    <label for="stack-name">Stack name</label>
+    <input id="stack-name" type="text" value="tezos-baker" autocomplete="off" spellcheck="false" aria-describedby="stack-name-error">
+    <p id="stack-name-error" class="error" aria-live="polite"></p>
+  </form>
+
+  <section class="out">
+    <div class="card">
+      <h2>Deploy</h2>
+      <a id="launch-stack" class="btn" target="_blank" rel="noopener noreferrer" aria-disabled="true">Launch Stack in AWS</a>
+      <p id="launch-note" class="note" aria-live="polite"></p>
+    </div>
+
+    <div class="card">
+      <h2>Review what you deploy</h2>
+      <dl class="kv">
+        <dt>Template</dt><dd><code id="template-url"></code></dd>
+        <dt>SHA-256</dt><dd><code id="template-sha"></code></dd>
+        <dt>Enclave PCR0</dt><dd><code id="pcr0"></code></dd>
+        <dt>Source</dt><dd><a id="source-link" rel="noopener noreferrer">Template source for this release</a></dd>
+      </dl>
+      <p>Check that the template you deploy matches the published hash:</p>
+      <div class="code"><pre id="verify-cmd"></pre><button type="button" data-copy="verify-cmd">Copy</button></div>
+      <p>Or deploy from the CLI instead of the console:</p>
+      <div class="code"><pre id="cli-cmd"></pre><button type="button" data-copy="cli-cmd">Copy</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Estimated monthly cost</h2>
+      <table class="cost">
+        <tbody id="cost-lines"></tbody>
+        <tfoot><tr><th>Total (approx.)</th><th id="cost-total"></th></tr></tfoot>
+      </table>
+      <ul id="cost-caveats" class="note"></ul>
+    </div>
+  </section>
+</div>

@@ -1,0 +1,23 @@
+{
+  "releases": [
+    {
+      "version": "0.0.0-dev",
+      "status": "unreleased",
+      "octezVersions": ["25.3-1"],
+      "networks": [
+        { "id": "bakingnet", "label": "Bakingnet" },
+        { "id": "shadownet", "label": "Shadownet" },
+        { "id": "mainnet", "label": "Mainnet", "disabledReason": "Available after the external security audit (M5)" }
+      ],
+      "sourceUrl": "https://github.com/drchrispinnock/octezcloud",
+      "aws": {
+        "template": "aws/baker.yaml",
+        "templateSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "enclave": {
+          "arm64": { "pcr0": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" },
+          "x86_64": { "pcr0": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" }
+        }
+      }
+    }
+  ]
+}

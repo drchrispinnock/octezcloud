@@ -1,0 +1,18 @@
+<h1>Verify attestation</h1>
+<p class="lede">
+  Paste the attestation document and public key that your deployment outputs. Every check runs
+  in your browser and nothing is sent anywhere.
+</p>
+
+<div class="card notice">
+  <h2>Not available yet</h2>
+  <p>The verifier ships with milestone M2. It will check:</p>
+  <ol>
+    <li>The certificate chain or token signature against the cloud's root of trust (AWS Nitro root CA,
+      Google Confidential Space JWKS, Microsoft Azure Attestation signing keys).</li>
+    <li>That the measurement (PCR0, image digest or CCE policy hash) matches a published, signed release.</li>
+    <li>That the public key is bound to the attestation.</li>
+    <li>That debug mode is off.</li>
+  </ol>
+  <p>A CLI with the same checks will be published for offline verification.</p>
+</div>

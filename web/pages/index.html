@@ -1,0 +1,28 @@
+<section class="hero">
+  <h1>Bake on Tezos from your own cloud account, with the key in a TEE.</h1>
+  <p class="lede">
+    Octez Cloud generates a template that deploys an Octez node, DAL node and baker into
+    <strong>your</strong> AWS account. Azure and GCP come later. The consensus key is generated
+    and used only inside a hardware-backed trusted execution environment, and is sealed to a key
+    that only the attested signer image can unlock.
+  </p>
+  <p><a class="btn" href="/configure/">Configure a deployment</a> <a class="btn btn-ghost" href="/docs/threat-model/">Read the threat model</a></p>
+</section>
+
+<section class="grid3">
+  <div class="card">
+    <h2>No credentials, no backend</h2>
+    <p>This is a static site. You deploy the template yourself through your cloud's own console.
+      We never see your account, your keys or your funds.</p>
+  </div>
+  <div class="card">
+    <h2>Key in a TEE</h2>
+    <p>The tz4 consensus key lives in a Nitro Enclave. KMS releases the sealing key only to the
+      exact image measurement pinned in <em>your</em> key policy.</p>
+  </div>
+  <div class="card">
+    <h2>Verify it yourself</h2>
+    <p>Images are built reproducibly, and the measurements are published with each release.
+      You can check the attestation your deployment produces in your browser.</p>
+  </div>
+</section>

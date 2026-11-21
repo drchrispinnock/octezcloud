@@ -1,0 +1,22 @@
+[
+  {
+    "slug": "threat-model",
+    "title": "Threat model",
+    "summary": "What this project can and cannot do to you."
+  },
+  {
+    "slug": "keys",
+    "title": "Keys explained",
+    "summary": "Manager, consensus and companion keys, and why losing a deployment is recoverable."
+  },
+  {
+    "slug": "watermark",
+    "title": "Watermark and slashing",
+    "summary": "How the signer avoids double signing, and the rules you must follow."
+  },
+  {
+    "slug": "ai-assistants",
+    "title": "Using an AI assistant",
+    "summary": "Agent skills that drive your own AWS CLI and octez-client."
+  }
+]
