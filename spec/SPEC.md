@@ -163,6 +163,29 @@ User's cloud account
 
 ## 7. Signer
 
+### 7.0 Implementation: Signatory + tee-signer (forked)
+The signer is built from two existing Apache-2.0 projects, forked so we can carry the
+changes below and pin our own releases:
+
+| Component | Upstream | Fork | Runs on | Role |
+|---|---|---|---|---|
+| Signatory (Go) | `ecadlabs/signatory` (v1.4.1) | `drchrispinnock/signatory` | Host VM | Octez remote signer protocol to the baker, request decoding and policy, KMS vsock proxy, encrypted-key and watermark storage |
+| tee-signer (Rust) | `signatory-io/tee-signer` | `drchrispinnock/tee-signer` | Nitro Enclave / Confidential Space | Key generation, KMS-attested sealing and unsealing, signing (BLS with proof of possession, Ed25519, secp256k1, P-256) |
+
+Upstream already provides: enclave-side key generation, KMS sealing pinned to PCR0, tz4 BLS
+with PoP, a vsock transport (Nitro) and TCP (Confidential Space), and a DynamoDB/Firestore
+watermark in Signatory.
+
+**Gap that the forks close:** upstream enforces policy and the high watermark only in Signatory
+on the host. tee-signer's `Sign`/`SignWith` RPCs sign any bytes they are given. So a
+compromised host could get the enclave to double-sign. That breaks §7.3, which requires the TEE
+itself to refuse. The forks add an **enclave-enforced consensus mode** (§7.3.1). Upstream caveats
+that we take on: tee-signer's TEE backends are beta, there are no published EIFs/PCRs or
+reproducible builds, arm64 is undocumented, and ECAD Labs has wound down active Tezos protocol
+maintenance (v1.4.1 was validated up to PtTALLiN).
+
+We aim to offer the enclave changes upstream, but releases build from our forks.
+
 ### 7.1 Interface
 - Implements the Octez remote signer protocol (TCP or Unix socket as seen by the baker),
   so `octez-baker` uses it unchanged.
@@ -197,8 +220,30 @@ Requirements:
 Open question: whether to also add a small "safety margin" (e.g. skip N levels after a
 restart with unclear state).
 
+#### 7.3.1 Enclave-enforced consensus mode (tee-signer fork)
+- A per-key policy is fixed at key generation and sealed with the key: *consensus only*, plus
+  the chain ID. The host cannot change it. Changing it means generating a new key.
+- For such keys the enclave rejects the raw `Sign`/`SignDigest`/`SignWith` paths. It accepts
+  only Tenderbake block, preattestation and attestation payloads (and DAL attestations if the
+  key is a companion key). It parses the magic byte, chain ID, level and round itself.
+- The enclave holds the watermark (per operation kind: level, round, and payload hash so an
+  identical re-sign is allowed). It refuses anything at or below the watermark unless it is the
+  identical payload.
+- Persistence: before returning a signature the enclave emits the new watermark record, MAC'd
+  with a key derived inside the enclave from the sealed key material. Signatory must write it to
+  DynamoDB with a conditional (version-checked) write and confirm success. Only then does the
+  enclave release the signature. This is a two-step `SignConsensus` → `CommitWatermark` RPC.
+- On startup the enclave refuses to sign until Signatory has fed it the latest record, the
+  enclave has verified its MAC, and a conditional write of a fresh record (with a new epoch) has
+  succeeded. A stale or forged record means no signing.
+- Signatory's existing host-side watermark stays as a second, independent check.
+
 ### 7.4 Images
-- One signer codebase, with cloud adapters for attestation, key release and watermark store.
+- One signer codebase (the two forks in §7.0), with cloud adapters for attestation, key release
+  and watermark store.
+- The enclave image (EIF) is built from the tee-signer fork with a pinned Rust toolchain, for
+  aarch64 (Graviton, default) and x86_64. The Signatory host binary is built from its fork and
+  installed on the host. Its version is pinned in the template alongside Octez.
 - Reproducible builds: Nix or pinned Docker with `SOURCE_DATE_EPOCH`, published from CI with
   provenance (SLSA/Sigstore).
 - Each release publishes AWS PCRs (one set per architecture: the EIF is built for both arm64
@@ -264,8 +309,9 @@ each protocol activation.
 
 ## 11. Roadmap
 
-1. **M1: AWS end to end.** Signer core, Nitro adapter, CloudFormation template,
-   watermark on DynamoDB, CLI verifier, AWS quickstart. Target network: bakingnet/shadownet.
+1. **M1: AWS end to end.** tee-signer fork with the enclave-enforced consensus mode (§7.3.1),
+   reproducible arm64/x86_64 EIFs with published PCRs, Signatory fork wired to it, CloudFormation
+   template, watermark on DynamoDB, CLI verifier, AWS quickstart. Target network: bakingnet/shadownet.
 2. **M2: Website.** Configurator, browser verifier, documentation set.
 3. **M3: Azure.** ACI confidential container adapter, MAA + SKR, Bicep template.
 4. **M4: GCP.** Confidential Space adapter, WIF + Cloud KMS, Terraform module.
@@ -277,9 +323,9 @@ each protocol activation.
 ## 12. Proposed repository layout
 
 ```
-/signer            Signer core (remote signer protocol, BLS, watermark logic)
-/signer/adapters   aws-nitro, gcp-confidential-space, azure-aci-cc
-/images            Reproducible TEE image builds
+(signer)           Separate repos: drchrispinnock/tee-signer (enclave) and
+                   drchrispinnock/signatory (host), both forked from upstream, see §7.0
+/images            Reproducible TEE image builds (pin fork commits, build EIFs, emit PCRs)
 /templates/aws     CloudFormation
 /templates/gcp     Terraform module
 /templates/azure   Bicep
@@ -292,10 +338,11 @@ each protocol activation.
 
 ## 13. Open questions
 
-- Implementation language for the signer: Rust is the likely choice (BLS libraries, Nitro
-  SDK, WASM build for the browser verifier).
-- Reuse an existing open source Tezos signer (e.g. Signatory) with a TEE backend, or
-  write a minimal purpose-built signer?
+- ~~Implementation language / reuse Signatory?~~ Decided (2026-11-21): fork Signatory (Go, host)
+  and tee-signer (Rust, enclave). See §7.0. The verifier stays Rust/WASM.
+- How tee-signer authenticates its vsock client, and whether to add mutual authentication
+  between Signatory and the enclave (defence in depth beyond §7.3.1).
+- Azure: tee-signer has no ACI confidential-container backend yet. M3 means adding one to the fork.
 - Watermark safety margin after an unclean restart (§7.3).
 - Whether to support a non-TEE "testnet only" mode for cheaper experimentation.
 - Release signing and key management for the project itself.
